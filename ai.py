@@ -3,40 +3,78 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-# 1. Page Configuration
+# 1. Advanced Page Config
 st.set_page_config(
     page_title="Gemini AI | Engineered by Ibrahim",
     page_icon="✨",
     layout="centered"
 )
 
-# 2. Modern Glassmorphism & Enterprise Gradient CSS
+# 2. Modern Glassmorphism, Animated Gradient & Enterprise CSS
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500;700&display=swap');
     
     html, body, [class*="css"] {
-        font-family: 'Roboto', sans-serif;
+        font-family: 'Roboto Mono', monospace;
     }
 
-    /* Professional, Colorful Gradient Background */
+    /* Professional, Moving Gradient Background with floating light effects */
     .stApp {
-        background: radial-gradient(circle, #1a2333, #0d121c);
+        background: radial-gradient(circle at center, #1a2333 0%, #0d121c 100%);
         background-attachment: fixed;
         color: #e3e3e3;
+        overflow: hidden;
     }
     
-    /* Executive Glass Header Card */
+    /* Background Particle Animation (Requires JS to run, but we can fake it for looks) */
+    .stApp::before {
+        content: '';
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background-image: 
+            radial-gradient(#a8c7fa05 1px, transparent 1px),
+            radial-gradient(#9B51E005 1px, transparent 1px);
+        background-size: 15px 15px, 20px 20px;
+        background-position: 0 0, 10px 10px;
+        z-index: -1;
+        opacity: 0.5;
+        animation: particleMover 120s linear infinite;
+    }
+    
+    @keyframes particleMover {
+        0% { transform: translateY(0); }
+        100% { transform: translateY(-50px); }
+    }
+
+    /* Deep Set, Animated Glass Header Card */
     .hero-card {
         background: rgba(22, 25, 31, 0.9);
         backdrop-filter: blur(20px);
         border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 20px;
-        padding: 28px;
-        margin-bottom: 24px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        padding: 32px;
+        margin-bottom: 30px;
+        box-shadow: 0 15px 45px rgba(0, 0, 0, 0.6);
         position: relative;
         overflow: hidden;
+        /* Chase light effect */
+        &::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: conic-gradient(from 180deg at 50% 50%, #4285F4 0deg, transparent 90deg, #9B51E0 180deg, transparent 270deg, #4285F4 360deg);
+            animation: chase 8s linear infinite;
+            filter: blur(80px);
+            opacity: 0.15;
+            z-index: -1;
+        }
+    }
+    
+    @keyframes chase {
+        100% { transform: rotate(1turn); }
     }
     
     /* Top Gradient Accent Line */
@@ -48,64 +86,97 @@ st.markdown("""
         background: linear-gradient(90deg, #4285F4, #9B51E0, #A8C7FA);
     }
     
-    /* Gradient Typography */
+    /* Dynamic Typography with Animated Gradient */
     .hero-title {
-        font-size: 30px;
+        font-size: 32px;
         font-weight: 700;
-        letter-spacing: -0.5px;
-        background: linear-gradient(90deg, #A8C7FA, #7CACF8, #FFFFFF);
+        letter-spacing: -1px;
+        background: linear-gradient(90deg, #A8C7FA, #FFFFFF, #7CACF8);
+        background-size: 200% auto;
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
+        animation: textGradient 6s linear infinite;
         margin-bottom: 12px;
+    }
+    
+    @keyframes textGradient {
+        100% { background-position: 200% center; }
     }
     
     .hero-desc {
         color: #c4c7c5;
-        font-size: 15px;
-        line-height: 1.7;
-        margin-bottom: 18px;
+        font-size: 16px;
+        line-height: 1.8;
+        margin-bottom: 24px;
     }
     
-    /* Feature & Status Badges */
+    /* Advanced Status & Verification Badges */
     .badge-container {
         display: flex;
-        gap: 12px;
+        gap: 15px;
         flex-wrap: wrap;
     }
     
     .status-badge {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        background: rgba(66, 133, 244, 0.12);
-        border: 1px solid rgba(66, 133, 244, 0.3);
+        gap: 10px;
+        background: rgba(66, 133, 244, 0.15);
+        border: 1px solid rgba(66, 133, 244, 0.4);
         color: #a8c7fa;
-        padding: 6px 14px;
+        padding: 8px 18px;
         border-radius: 30px;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 500;
     }
     
     .quran-badge {
         display: inline-flex;
         align-items: center;
-        gap: 8px;
-        background: rgba(155, 81, 224, 0.12);
-        border: 1px solid rgba(155, 81, 224, 0.3);
+        gap: 10px;
+        background: rgba(155, 81, 224, 0.15);
+        border: 1px solid rgba(155, 81, 224, 0.4);
         color: #d7aefb;
-        padding: 6px 14px;
+        padding: 8px 18px;
         border-radius: 30px;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: 500;
+        animation: quranPulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes quranPulse {
+        0%, 100% { box-shadow: 0 0 5px rgba(155, 81, 224, 0.2); }
+        50% { box-shadow: 0 0 15px rgba(155, 81, 224, 0.5); }
     }
     
     .status-dot {
-        width: 8px;
-        height: 8px;
+        width: 10px;
+        height: 10px;
         background-color: #34A853;
         border-radius: 50%;
-        box-shadow: 0 0 10px #34A853;
+        box-shadow: 0 0 15px #34A853;
+        animation: dotPulse 1.5s ease-in-out infinite;
     }
+    
+    @keyframes dotPulse {
+        0%, 100% { opacity: 0.7; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.1); box-shadow: 0 0 25px #34A853; }
+    }
+
+    /* Modern Chat Bubble Styling */
+    [data-testid="stChatMessage"] {
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 15px;
+        padding: 15px;
+        background: rgba(22, 25, 31, 0.7);
+        backdrop-filter: blur(10px);
+        margin-bottom: 15px;
+    }
+    [data-testid="stChatMessage"]:hover {
+        border-color: rgba(66, 133, 244, 0.2);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
     </style>
 """, unsafe_allow_html=True)
 
