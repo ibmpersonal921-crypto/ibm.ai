@@ -3,24 +3,25 @@ import streamlit as st
 from google import genai
 from google.genai import types
 
-# 1. Executive Page Configuration
+# 1. Page Configuration
 st.set_page_config(
     page_title="AI Assistant | Engineered by Ibrahim",
     page_icon="⚡",
     layout="centered"
 )
 
-# 2. Stable Pure Black CSS (Zero-Glitch Engine)
+# 2. Pitch Black Styling (Safe Specific Selectors - Preserves Icons)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    html, body, [class*="css"], [class*="st-"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    /* Target ONLY typography elements to protect Streamlit icon fonts */
+    html, body, p, span, div, h1, h2, h3, h4, h5, h6, label, input, textarea {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Absolute Pitch Black Background Engine */
-    html, body, .stApp, 
+    /* Absolute Pitch Black Background */
+    .stApp, 
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
     [data-testid="stAppViewContainer"], 
@@ -32,15 +33,15 @@ st.markdown("""
         background: #000000 !important;
     }
 
-    /* Remove Streamlit Header Tint Bar */
+    /* Hide Top Header Accent Bar */
     [data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* Stealth Container with Static RGB Accent Bar */
+    /* Hero Card with Static Top RGB Line */
     .hero-card {
-        background: #080808;
-        border: 1px solid #1c1c1e;
+        background: #09090b;
+        border: 1px solid #18181b;
         border-radius: 14px;
         padding: 24px;
         margin-bottom: 20px;
@@ -82,9 +83,9 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #121212;
-        border: 1px solid #222222;
-        color: #e4e4e7;
+        background: #141417;
+        border: 1px solid #27272a;
+        color: #f4f4f5;
         padding: 5px 12px;
         border-radius: 20px;
         font-size: 12px;
@@ -98,37 +99,32 @@ st.markdown("""
         border-radius: 50%;
     }
 
-    /* Chat Messages Overrides */
+    /* Chat Messages Styling Fix */
     [data-testid="stChatMessage"] {
-        background-color: #080808 !important;
-        border: 1px solid #1c1c1e !important;
+        background-color: #09090b !important;
+        border: 1px solid #18181b !important;
         border-radius: 12px;
         margin-bottom: 12px;
         color: #f4f4f5 !important;
     }
 
-    /* Chat Input Styling */
-    [data-testid="stChatInput"] > div,
+    /* Chat Input Container Styling */
+    [data-testid="stChatInput"] {
+        background-color: #000000 !important;
+    }
+
+    [data-testid="stChatInput"] > div {
+        background-color: #09090b !important;
+        border-color: #27272a !important;
+    }
+
     [data-testid="stChatInput"] textarea {
-        background-color: #080808 !important;
-        border-color: #222222 !important;
-        color: #ffffff !important;
-        box-shadow: none !important;
-    }
-
-    [data-testid="stChatInput"] textarea:focus {
-        border-color: #00e5ff !important;
-    }
-
-    [data-testid="stChatInput"] button {
-        background-color: #121212 !important;
-        border: 1px solid #222222 !important;
         color: #ffffff !important;
     }
 
-    /* Sidebar Overrides */
+    /* Sidebar Border Fix */
     section[data-testid="stSidebar"] {
-        border-right: 1px solid #1c1c1e !important;
+        border-right: 1px solid #18181b !important;
     }
     </style>
 """, unsafe_allow_html=True)
