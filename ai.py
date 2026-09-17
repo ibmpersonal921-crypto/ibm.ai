@@ -10,17 +10,17 @@ st.set_page_config(
     layout="centered"
 )
 
-# 2. Pitch Black Styling with Modern Curved Input Box
+# 2. Pitch Black Styling with Stable Curved Chat Input
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    /* Target ONLY typography elements to protect Streamlit icon fonts */
+    /* Target typography elements directly to safeguard Streamlit icons */
     html, body, p, span, div, h1, h2, h3, h4, h5, h6, label, input, textarea {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Absolute Pitch Black Background */
+    /* Pitch Black Main App Layout */
     .stApp, 
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
@@ -33,12 +33,12 @@ st.markdown("""
         background: #000000 !important;
     }
 
-    /* Hide Top Header Accent Bar */
+    /* Hide Top Header Line */
     [data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* Hero Card with Static Top RGB Line */
+    /* Executive Hero Card */
     .hero-card {
         background: #09090b;
         border: 1px solid #18181b;
@@ -108,23 +108,29 @@ st.markdown("""
         color: #f4f4f5 !important;
     }
 
-    /* Modern Curved Chat Input Box */
+    /* Modern Curved Pill Input Bar */
     [data-testid="stChatInput"] {
-        background-color: #000000 !important;
-        padding-bottom: 10px !important;
+        background-color: transparent !important;
+        padding-bottom: 8px !important;
     }
 
     [data-testid="stChatInput"] > div {
         background-color: #09090b !important;
         border: 1px solid #27272a !important;
-        border-radius: 28px !important;
-        padding: 4px 12px !important;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+        border-radius: 24px !important;
+        padding: 4px 10px !important;
+        box-shadow: none !important;
+    }
+
+    [data-testid="stChatInput"] > div:focus-within {
+        border-color: #00e5ff !important;
     }
 
     [data-testid="stChatInput"] textarea {
         color: #ffffff !important;
         background-color: transparent !important;
+        box-shadow: none !important;
+        outline: none !important;
     }
 
     [data-testid="stChatInput"] button {
