@@ -6,101 +6,121 @@ from google.genai import types
 # 1. Executive Page Configuration
 st.set_page_config(
     page_title="AI Assistant | Engineered by Ibrahim",
-    page_icon="⚡",
+    page_icon="⚫",
     layout="centered"
 )
 
-# 2. Pure Black Stealth CSS (Zero Blue Borders / Zero Glow)
+# 2. Complete CSS Reset (Nukes Streamlit's Default Blue/Grey Theme Engine)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    html, body, [class*="css"] {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    /* Global Font & Reset */
+    html, body, [class*="css"], [class*="st-"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
 
-    /* Pitch Black Background */
-    .stApp {
+    /* Force Every Native Frame to Absolute Pitch Black #000000 */
+    html, body, .stApp, 
+    [data-testid="stHeader"], 
+    [data-testid="stToolbar"], 
+    [data-testid="stAppViewContainer"], 
+    [data-testid="stMain"], 
+    [data-testid="stBottom"], 
+    [data-testid="stBottom"] > div,
+    [data-testid="stChatInput"],
+    header, footer {
         background-color: #000000 !important;
-        color: #f4f4f5;
+        background: #000000 !important;
     }
 
-    /* Stealth Minimalist Container */
+    /* Hide Top Streamlit Color Bar Header Accent */
+    [data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* Stealth Container */
     .hero-card {
-        background: #09090b;
-        border: 1px solid #18181b;
-        border-radius: 16px;
-        padding: 28px;
+        background: #080808;
+        border: 1px solid #1a1a1a;
+        border-radius: 14px;
+        padding: 26px;
         margin-bottom: 24px;
-        box-shadow: none;
     }
 
     .hero-title {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 700;
         color: #ffffff;
         letter-spacing: -0.5px;
-        margin-bottom: 10px;
+        margin-bottom: 8px;
     }
 
     .hero-desc {
         color: #a1a1aa;
         font-size: 14px;
         line-height: 1.6;
-        margin-bottom: 20px;
+        margin-bottom: 18px;
     }
 
-    /* Clean Enterprise Badges */
+    /* Pure Monochrome Badges */
     .badge-container {
         display: flex;
         gap: 10px;
         flex-wrap: wrap;
     }
 
-    .status-badge {
+    .status-badge, .quran-badge {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #18181b;
-        border: 1px solid #27272a;
-        color: #f4f4f5;
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .quran-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #18181b;
-        border: 1px solid #27272a;
-        color: #a7f3d0;
-        padding: 6px 14px;
+        background: #121212;
+        border: 1px solid #222222;
+        color: #e4e4e7;
+        padding: 5px 12px;
         border-radius: 20px;
         font-size: 12px;
         font-weight: 500;
     }
 
     .status-dot {
-        width: 7px;
-        height: 7px;
-        background-color: #10b981;
+        width: 6px;
+        height: 6px;
+        background-color: #ffffff;
         border-radius: 50%;
     }
 
-    /* Streamlit Chat Element Overrides */
+    /* Chat Messages Styling */
     [data-testid="stChatMessage"] {
-        background-color: #09090b !important;
-        border: 1px solid #18181b !important;
+        background-color: #080808 !important;
+        border: 1px solid #1a1a1a !important;
         border-radius: 12px;
         margin-bottom: 12px;
+        color: #f4f4f5 !important;
     }
 
-    [data-testid="stChatInput"] {
-        border-color: #27272a !important;
-        background-color: #09090b !important;
+    /* Kill All Blue/Glow Focus Outlines on Chat Input */
+    [data-testid="stChatInput"] > div,
+    [data-testid="stChatInput"] textarea {
+        background-color: #080808 !important;
+        border-color: #222222 !important;
+        color: #ffffff !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    [data-testid="stChatInput"] textarea:focus,
+    [data-testid="stChatInput"] textarea:focus-visible,
+    [data-testid="stChatInput"] textarea:focus-within {
+        border-color: #444444 !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    [data-testid="stChatInput"] button {
+        background-color: #121212 !important;
+        border: 1px solid #222222 !important;
+        color: #ffffff !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -108,7 +128,7 @@ st.markdown("""
 # 3. Clean Header Interface
 st.markdown("""
     <div class="hero-card">
-        <div class="hero-title">⚡ Welcome, Adeel Bhai</div>
+        <div class="hero-title">Welcome, Adeel Bhai</div>
         <div class="hero-desc">
             I am an executive AI assistant engineered by <b>Ibrahim</b> (who is a very good person).<br>
             Optimized to deliver direct, fluff-free responses with verified <b>Quranic (Surah & Ayah)</b> and authentic <b>Hadith citations</b>.
