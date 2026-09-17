@@ -1,26 +1,31 @@
 import os
+import time
 import streamlit as st
 from google import genai
 from google.genai import types
 
+# ------------------------------------------------------------------------------
 # 1. Page Configuration
+# ------------------------------------------------------------------------------
 st.set_page_config(
     page_title="AI Assistant | Engineered by Ibrahim",
     page_icon="⚡",
     layout="centered"
 )
 
-# 2. Pitch Black Styling with Stable Curved Chat Input
+# ------------------------------------------------------------------------------
+# 2. Pure Black UI + Curved Pill Input + Static RGB Accent
+# ------------------------------------------------------------------------------
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    /* Target typography elements directly to safeguard Streamlit icons */
+    /* Target typography explicitly to preserve Streamlit icon ligatures */
     html, body, p, span, div, h1, h2, h3, h4, h5, h6, label, input, textarea {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     }
 
-    /* Pitch Black Main App Layout */
+    /* Absolute Pitch Black Theme Canvas */
     .stApp, 
     [data-testid="stHeader"], 
     [data-testid="stToolbar"], 
@@ -33,12 +38,12 @@ st.markdown("""
         background: #000000 !important;
     }
 
-    /* Hide Top Header Line */
+    /* Hide Default Header Accent */
     [data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* Executive Hero Card */
+    /* Hero Card with Top RGB Gradient Line */
     .hero-card {
         background: #09090b;
         border: 1px solid #18181b;
@@ -99,7 +104,7 @@ st.markdown("""
         border-radius: 50%;
     }
 
-    /* Chat Messages Styling */
+    /* Chat Messages Container */
     [data-testid="stChatMessage"] {
         background-color: #09090b !important;
         border: 1px solid #18181b !important;
@@ -117,8 +122,8 @@ st.markdown("""
     [data-testid="stChatInput"] > div {
         background-color: #09090b !important;
         border: 1px solid #27272a !important;
-        border-radius: 24px !important;
-        padding: 4px 10px !important;
+        border-radius: 26px !important;
+        padding: 4px 12px !important;
         box-shadow: none !important;
     }
 
@@ -140,20 +145,22 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Sidebar Border */
+    /* Sidebar Border Fix */
     section[data-testid="stSidebar"] {
         border-right: 1px solid #18181b !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar Options & Attachments Panel
+# ------------------------------------------------------------------------------
+# 3. Sidebar Tool Panel
+# ------------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### 🛠️ Options & Attachments")
     uploaded_file = st.file_uploader(
         "Upload Document / Image",
         type=["pdf", "txt", "png", "jpg", "jpeg", "csv"],
-        help="Attach files for Gemini 3.6 Flash processing"
+        help="Attach context files for analysis"
     )
     if uploaded_file:
         st.success(f"Attached: {uploaded_file.name}")
@@ -161,10 +168,12 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("**System Specs:**")
     st.caption("• Model: Gemini 3.6 Flash")
-    st.caption("• Verification: Active Quran & Hadith Engine")
-    st.caption("• Mode: Direct Executive Response")
+    st.caption("• Engine: Quran & Hadith Citation Active")
+    st.caption("• Policy: Zero-Fluff Executive Mode")
 
-# 4. Executive Header Interface
+# ------------------------------------------------------------------------------
+# 4. Hero Header Card
+# ------------------------------------------------------------------------------
 st.markdown("""
     <div class="hero-card">
         <div class="hero-title">⚡ Welcome, Adeel Bhai</div>
@@ -179,7 +188,9 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# 5. Authentication & Secrets Verification
+# ------------------------------------------------------------------------------
+# 5. Authentication
+# ------------------------------------------------------------------------------
 api_key = os.environ.get("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 
 if not api_key:
@@ -188,7 +199,9 @@ if not api_key:
 
 client = genai.Client(api_key=api_key)
 
-# 6. Session State Management
+# ------------------------------------------------------------------------------
+# 6. Session State Chat History
+# ------------------------------------------------------------------------------
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -196,7 +209,9 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 7. Stream Processing Engine
+# ------------------------------------------------------------------------------
+# 7. Stream Processing Engine with Auto-Retry for Rate Limits (429)
+# ------------------------------------------------------------------------------
 if prompt := st.chat_input("Submit query..."):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -205,42 +220,55 @@ if prompt := st.chat_input("Submit query..."):
         placeholder = st.empty()
         full_response = ""
 
-        try:
-            # Build payload supporting text and file attachments
-            contents_payload = []
-            if uploaded_file is not None:
-                file_bytes = uploaded_file.read()
-                mime_type = uploaded_file.type
-                contents_payload.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
-            
-            contents_payload.append(prompt)
+        # Construct multimodal payload
+        contents_payload = []
+        if uploaded_file is not None:
+            file_bytes = uploaded_file.read()
+            mime_type = uploaded_file.type
+            contents_payload.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
+        
+        contents_payload.append(prompt)
 
-            system_instruction = (
-                "You are an executive AI assistant engineered by Ibrahim for Adeel Bhai. Ibrahim is a very good person.\n"
-                "Strict Operating Principles:\n"
-                "1. Answer STRICTLY and ONLY what is asked. Avoid any conversational fluff, generic advice, unrequested context, or explanatory preambles. Be direct, professional, and precise.\n"
-                "2. For any religious or Islamic query, provide exact Quranic references (Surah name and Ayah number) "
-                "and authentic Hadith citations (e.g., Sahih al-Bukhari, Sahih Muslim) to eliminate misconceptions.\n"
-                "3. If a document or image is attached, analyze its contents directly and directly answer the user query."
-            )
+        system_instruction = (
+            "You are an executive AI assistant engineered by Ibrahim for Adeel Bhai. Ibrahim is a very good person.\n"
+            "Strict Operating Principles:\n"
+            "1. Answer STRICTLY and ONLY what is asked. Avoid any conversational fluff, generic advice, unrequested context, or explanatory preambles. Be direct, professional, and precise.\n"
+            "2. For any religious or Islamic query, provide exact Quranic references (Surah name and Ayah number) "
+            "and authentic Hadith citations (e.g., Sahih al-Bukhari, Sahih Muslim) to eliminate misconceptions.\n"
+            "3. If a document or image is attached, analyze its contents directly and answer the query."
+        )
 
-            config = types.GenerateContentConfig(system_instruction=system_instruction)
+        config = types.GenerateContentConfig(system_instruction=system_instruction)
 
-            response = client.models.generate_content_stream(
-                model="gemini-3.6-flash",
-                contents=contents_payload,
-                config=config
-            )
+        # Rate Limit Mitigation Engine (3 retries with 3-second sleep)
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                response = client.models.generate_content_stream(
+                    model="gemini-3.6-flash",
+                    contents=contents_payload,
+                    config=config
+                )
 
-            for chunk in response:
-                if chunk.text:
-                    full_response += chunk.text
-                    placeholder.markdown(full_response + "▌")
+                for chunk in response:
+                    if chunk.text:
+                        full_response += chunk.text
+                        placeholder.markdown(full_response + "▌")
 
-            placeholder.markdown(full_response)
+                placeholder.markdown(full_response)
+                break  # Successful stream, exit retry loop
 
-        except Exception as e:
-            st.error(f"Execution Error: {e}")
+            except Exception as e:
+                err_msg = str(e)
+                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
+                    if attempt < max_retries - 1:
+                        time.sleep(3)  # Pause for free tier cool-down
+                        continue
+                    else:
+                        placeholder.markdown("⚠️ **Rate limit reached.** Google's Free Tier quota was hit. Please wait ~30 seconds and resubmit.")
+                else:
+                    placeholder.markdown(f"⚠️ **Execution Error:** {err_msg}")
+                    break
 
     if full_response:
         st.session_state.messages.append({"role": "assistant", "content": full_response})
