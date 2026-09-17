@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# 2. Pitch Black Styling (Safe Specific Selectors - Preserves Icons)
+# 2. Pitch Black Styling with Modern Curved Input Box
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -42,7 +42,7 @@ st.markdown("""
     .hero-card {
         background: #09090b;
         border: 1px solid #18181b;
-        border-radius: 14px;
+        border-radius: 16px;
         padding: 24px;
         margin-bottom: 20px;
         position: relative;
@@ -99,30 +99,42 @@ st.markdown("""
         border-radius: 50%;
     }
 
-    /* Chat Messages Styling Fix */
+    /* Chat Messages Styling */
     [data-testid="stChatMessage"] {
         background-color: #09090b !important;
         border: 1px solid #18181b !important;
-        border-radius: 12px;
+        border-radius: 16px;
         margin-bottom: 12px;
         color: #f4f4f5 !important;
     }
 
-    /* Chat Input Container Styling */
+    /* Modern Curved Chat Input Box */
     [data-testid="stChatInput"] {
         background-color: #000000 !important;
+        padding-bottom: 10px !important;
     }
 
     [data-testid="stChatInput"] > div {
         background-color: #09090b !important;
-        border-color: #27272a !important;
+        border: 1px solid #27272a !important;
+        border-radius: 28px !important;
+        padding: 4px 12px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
     }
 
     [data-testid="stChatInput"] textarea {
         color: #ffffff !important;
+        background-color: transparent !important;
     }
 
-    /* Sidebar Border Fix */
+    [data-testid="stChatInput"] button {
+        border-radius: 50% !important;
+        background-color: #18181b !important;
+        border: 1px solid #27272a !important;
+        color: #ffffff !important;
+    }
+
+    /* Sidebar Border */
     section[data-testid="stSidebar"] {
         border-right: 1px solid #18181b !important;
     }
