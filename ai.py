@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-# 2. Pure Black Background with Smooth RGB Border & Accent Animations
+# 2. Stable Pure Black CSS (Zero-Glitch Engine)
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -32,44 +32,34 @@ st.markdown("""
         background: #000000 !important;
     }
 
-    /* Hide Top Streamlit Color Bar Header Accent */
+    /* Remove Streamlit Header Tint Bar */
     [data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* RGB Animated Border Keyframes */
-    @keyframes rgbGlow {
-        0% { border-color: #ff0055; box-shadow: 0 0 12px rgba(255, 0, 85, 0.25); }
-        33% { border-color: #00e5ff; box-shadow: 0 0 12px rgba(0, 229, 255, 0.25); }
-        66% { border-color: #9d00ff; box-shadow: 0 0 12px rgba(157, 0, 255, 0.25); }
-        100% { border-color: #ff0055; box-shadow: 0 0 12px rgba(255, 0, 85, 0.25); }
-    }
-
-    @keyframes rgbText {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-
-    /* Stealth Container with RGB Animated Border */
+    /* Stealth Container with Static RGB Accent Bar */
     .hero-card {
         background: #080808;
-        border: 1px solid #ff0055;
-        border-radius: 16px;
-        padding: 26px;
-        margin-bottom: 24px;
-        animation: rgbGlow 8s linear infinite;
+        border: 1px solid #1c1c1e;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 20px;
+        position: relative;
+        overflow: hidden;
     }
 
-    /* Animated Dynamic Gradient Title */
+    .hero-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #ff0055, #00e5ff, #9d00ff);
+    }
+
     .hero-title {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 700;
-        background: linear-gradient(90deg, #ff0055, #00e5ff, #9d00ff, #ff0055);
-        background-size: 300% 100%;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        animation: rgbText 6s ease infinite;
+        color: #ffffff;
         letter-spacing: -0.5px;
         margin-bottom: 8px;
     }
@@ -78,10 +68,10 @@ st.markdown("""
         color: #a1a1aa;
         font-size: 14px;
         line-height: 1.6;
-        margin-bottom: 18px;
+        margin-bottom: 16px;
     }
 
-    /* RGB Accented Badges */
+    /* Badges */
     .badge-container {
         display: flex;
         gap: 10px;
@@ -92,9 +82,9 @@ st.markdown("""
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        background: #111111;
+        background: #121212;
         border: 1px solid #222222;
-        color: #f4f4f5;
+        color: #e4e4e7;
         padding: 5px 12px;
         border-radius: 20px;
         font-size: 12px;
@@ -102,34 +92,32 @@ st.markdown("""
     }
 
     .status-dot {
-        width: 7px;
-        height: 7px;
+        width: 6px;
+        height: 6px;
         background-color: #00e5ff;
         border-radius: 50%;
-        box-shadow: 0 0 8px #00e5ff;
     }
 
-    /* Chat Messages & Sidebar Styling Overrides */
+    /* Chat Messages Overrides */
     [data-testid="stChatMessage"] {
         background-color: #080808 !important;
-        border: 1px solid #1a1a1a !important;
+        border: 1px solid #1c1c1e !important;
         border-radius: 12px;
         margin-bottom: 12px;
         color: #f4f4f5 !important;
     }
 
+    /* Chat Input Styling */
     [data-testid="stChatInput"] > div,
     [data-testid="stChatInput"] textarea {
         background-color: #080808 !important;
         border-color: #222222 !important;
         color: #ffffff !important;
         box-shadow: none !important;
-        outline: none !important;
     }
 
     [data-testid="stChatInput"] textarea:focus {
         border-color: #00e5ff !important;
-        box-shadow: 0 0 8px rgba(0, 229, 255, 0.3) !important;
     }
 
     [data-testid="stChatInput"] button {
@@ -138,31 +126,31 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Sidebar RGB Styling */
+    /* Sidebar Overrides */
     section[data-testid="stSidebar"] {
-        border-right: 1px solid #1a1a1a !important;
+        border-right: 1px solid #1c1c1e !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# 3. Sidebar Tool Panel for Attachments & Extra Options
+# 3. Sidebar Options & Attachments Panel
 with st.sidebar:
     st.markdown("### 🛠️ Options & Attachments")
     uploaded_file = st.file_uploader(
         "Upload Document / Image",
         type=["pdf", "txt", "png", "jpg", "jpeg", "csv"],
-        help="Upload context documents or images for Gemini 3.6 Flash analysis"
+        help="Attach files for Gemini 3.6 Flash processing"
     )
     if uploaded_file:
         st.success(f"Attached: {uploaded_file.name}")
     
     st.markdown("---")
-    st.markdown("**Engine Specs:**")
+    st.markdown("**System Specs:**")
     st.caption("• Model: Gemini 3.6 Flash")
     st.caption("• Verification: Active Quran & Hadith Engine")
-    st.caption("• Output Policy: Zero-Fluff Executive Mode")
+    st.caption("• Mode: Direct Executive Response")
 
-# 4. Main RGB Header Interface
+# 4. Executive Header Interface
 st.markdown("""
     <div class="hero-card">
         <div class="hero-title">⚡ Welcome, Adeel Bhai</div>
@@ -194,7 +182,7 @@ for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 7. Stream Processing & Multimodal Input Support
+# 7. Stream Processing Engine
 if prompt := st.chat_input("Submit query..."):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -204,7 +192,7 @@ if prompt := st.chat_input("Submit query..."):
         full_response = ""
 
         try:
-            # Prepare Multi-modal contents list if document/file is uploaded
+            # Build payload supporting text and file attachments
             contents_payload = []
             if uploaded_file is not None:
                 file_bytes = uploaded_file.read()
@@ -219,7 +207,7 @@ if prompt := st.chat_input("Submit query..."):
                 "1. Answer STRICTLY and ONLY what is asked. Avoid any conversational fluff, generic advice, unrequested context, or explanatory preambles. Be direct, professional, and precise.\n"
                 "2. For any religious or Islamic query, provide exact Quranic references (Surah name and Ayah number) "
                 "and authentic Hadith citations (e.g., Sahih al-Bukhari, Sahih Muslim) to eliminate misconceptions.\n"
-                "3. If a document or image is attached, analyze its contents directly and directly answer the query regarding it."
+                "3. If a document or image is attached, analyze its contents directly and directly answer the user query."
             )
 
             config = types.GenerateContentConfig(system_instruction=system_instruction)
