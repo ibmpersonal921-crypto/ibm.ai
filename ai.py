@@ -12,7 +12,14 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import sys
+from pathlib import Path
 
+# Add current directory to Python path
+sys.path.append(str(Path(__file__).parent.resolve()))
+
+import streamlit as st
+# ... rest of your imports
 import streamlit as st
 from dotenv import load_dotenv
 
