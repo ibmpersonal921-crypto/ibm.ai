@@ -1,2 +1,17 @@
-streamlit
-google-genai
+# Core app
+streamlit>=1.38.0
+requests>=2.31.0
+python-dotenv>=1.0.1
+
+# AI providers (you only need the one you configure in .env)
+anthropic>=0.34.0
+openai>=1.40.0
+
+# Recitation coach: speech-to-text + text-to-speech
+SpeechRecognition>=3.10.4
+gTTS>=2.5.1
+pydub>=0.25.1
+
+# Arabic text shaping (for clean diff / normalization, not rendering)
+python-bidi>=0.4.2
+arabic-reshaper>=3.0.0
