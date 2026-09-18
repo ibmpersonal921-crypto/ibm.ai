@@ -1,274 +1,289 @@
-import os
-import time
-import streamlit as st
-from google import genai
-from google.genai import types
+"""
+Quran Study Companion
+----------------------
+A Streamlit app for exploring the Quran, asking study questions to an
+AI-assisted companion, and practicing recitation with instant feedback.
 
-# ------------------------------------------------------------------------------
-# 1. Page Configuration
-# ------------------------------------------------------------------------------
-st.set_page_config(
-    page_title="AI Assistant | Engineered by Ibrahim",
-    page_icon="⚡",
-    layout="centered"
+Run locally:
+    streamlit run app.py
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+import streamlit as st
+from dotenv import load_dotenv
+
+from modules import quran_api
+from modules.ai_scholar import ScholarChat, DISCLAIMER
+from modules.recitation_coach import (
+    transcribe_audio,
+    transcribe_with_whisper,
+    compare_to_reference,
+    synthesize_feedback_audio,
 )
 
-# ------------------------------------------------------------------------------
-# 2. Pure Black UI + Curved Pill Input + Static RGB Accent
-# ------------------------------------------------------------------------------
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    /* Target typography explicitly to preserve Streamlit icon ligatures */
-    html, body, p, span, div, h1, h2, h3, h4, h5, h6, label, input, textarea {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    }
+load_dotenv()
 
-    /* Absolute Pitch Black Theme Canvas */
-    .stApp, 
-    [data-testid="stHeader"], 
-    [data-testid="stToolbar"], 
-    [data-testid="stAppViewContainer"], 
-    [data-testid="stMain"], 
-    [data-testid="stBottom"], 
-    [data-testid="stSidebar"],
-    footer {
-        background-color: #000000 !important;
-        background: #000000 !important;
-    }
+# ----------------------------------------------------------------------
+# Page setup
+# ----------------------------------------------------------------------
+st.set_page_config(
+    page_title="Quran Study Companion",
+    page_icon="☾",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-    /* Hide Default Header Accent */
-    [data-testid="stHeader"] {
-        display: none !important;
-    }
+css_path = Path(__file__).parent / "assets" / "style.css"
+st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
 
-    /* Hero Card with Top RGB Gradient Line */
-    .hero-card {
-        background: #09090b;
-        border: 1px solid #18181b;
-        border-radius: 16px;
-        padding: 24px;
-        margin-bottom: 20px;
-        position: relative;
-        overflow: hidden;
-    }
 
-    .hero-card::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, #ff0055, #00e5ff, #9d00ff);
-    }
-
-    .hero-title {
-        font-size: 24px;
-        font-weight: 700;
-        color: #ffffff;
-        letter-spacing: -0.5px;
-        margin-bottom: 8px;
-    }
-
-    .hero-desc {
-        color: #a1a1aa;
-        font-size: 14px;
-        line-height: 1.6;
-        margin-bottom: 16px;
-    }
-
-    /* Badges */
-    .badge-container {
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-    }
-
-    .status-badge, .quran-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: #141417;
-        border: 1px solid #27272a;
-        color: #f4f4f5;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: 500;
-    }
-
-    .status-dot {
-        width: 6px;
-        height: 6px;
-        background-color: #00e5ff;
-        border-radius: 50%;
-    }
-
-    /* Chat Messages Container */
-    [data-testid="stChatMessage"] {
-        background-color: #09090b !important;
-        border: 1px solid #18181b !important;
-        border-radius: 16px;
-        margin-bottom: 12px;
-        color: #f4f4f5 !important;
-    }
-
-    /* Modern Curved Pill Input Bar */
-    [data-testid="stChatInput"] {
-        background-color: transparent !important;
-        padding-bottom: 8px !important;
-    }
-
-    [data-testid="stChatInput"] > div {
-        background-color: #09090b !important;
-        border: 1px solid #27272a !important;
-        border-radius: 26px !important;
-        padding: 4px 12px !important;
-        box-shadow: none !important;
-    }
-
-    [data-testid="stChatInput"] > div:focus-within {
-        border-color: #00e5ff !important;
-    }
-
-    [data-testid="stChatInput"] textarea {
-        color: #ffffff !important;
-        background-color: transparent !important;
-        box-shadow: none !important;
-        outline: none !important;
-    }
-
-    [data-testid="stChatInput"] button {
-        border-radius: 50% !important;
-        background-color: #18181b !important;
-        border: 1px solid #27272a !important;
-        color: #ffffff !important;
-    }
-
-    /* Sidebar Border Fix */
-    section[data-testid="stSidebar"] {
-        border-right: 1px solid #18181b !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
-
-# ------------------------------------------------------------------------------
-# 3. Sidebar Tool Panel
-# ------------------------------------------------------------------------------
-with st.sidebar:
-    st.markdown("### 🛠️ Options & Attachments")
-    uploaded_file = st.file_uploader(
-        "Upload Document / Image",
-        type=["pdf", "txt", "png", "jpg", "jpeg", "csv"],
-        help="Attach context files for analysis"
+def hero(title: str, subtitle: str) -> None:
+    st.markdown(
+        f"""
+        <div class="qc-hero">
+            <p class="qc-hero-arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
+            <hr class="qc-hero-rule" />
+            <p class="qc-hero-title">{title}</p>
+            <p class="qc-hero-sub">{subtitle}</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    if uploaded_file:
-        st.success(f"Attached: {uploaded_file.name}")
-    
-    st.markdown("---")
-    st.markdown("**System Specs:**")
-    st.caption("• Model: Gemini 3.6 Flash")
-    st.caption("• Engine: Quran & Hadith Citation Active")
-    st.caption("• Policy: Zero-Fluff Executive Mode")
 
-# ------------------------------------------------------------------------------
-# 4. Hero Header Card
-# ------------------------------------------------------------------------------
-st.markdown("""
-    <div class="hero-card">
-        <div class="hero-title">⚡ Welcome, Adeel Bhai</div>
-        <div class="hero-desc">
-            I am an executive AI assistant engineered by <b>Ibrahim</b> (who is a very good person).<br>
-            Optimized to deliver direct, fluff-free responses with verified <b>Quranic (Surah & Ayah)</b> and authentic <b>Hadith citations</b>.
-        </div>
-        <div class="badge-container">
-            <div class="status-badge"><span class="status-dot"></span> System Online</div>
-            <div class="quran-badge">📖 Quran & Hadith Verified</div>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
 
-# ------------------------------------------------------------------------------
-# 5. Authentication
-# ------------------------------------------------------------------------------
-api_key = os.environ.get("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+def section_label(text: str) -> None:
+    st.markdown(f'<p class="qc-section-label">{text}</p>', unsafe_allow_html=True)
 
-if not api_key:
-    st.error("⚠️ GEMINI_API_KEY is missing from Streamlit Secrets.")
-    st.stop()
 
-client = genai.Client(api_key=api_key)
+def disclaimer(text: str = DISCLAIMER) -> None:
+    st.markdown(f'<div class="qc-disclaimer">{text}</div>', unsafe_allow_html=True)
 
-# ------------------------------------------------------------------------------
-# 6. Session State Chat History
-# ------------------------------------------------------------------------------
-if "messages" not in st.session_state:
-    st.session_state.messages = []
 
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+# ----------------------------------------------------------------------
+# Sidebar navigation
+# ----------------------------------------------------------------------
+with st.sidebar:
+    st.markdown("### ☾ Quran Study Companion")
+    st.caption("An educational companion, not a religious authority.")
+    page = st.radio(
+        "Navigate",
+        ["Home", "Browse Quran", "AI Study Companion", "Recitation Coach"],
+        label_visibility="collapsed",
+    )
+    st.divider()
+    st.caption(
+        f"AI provider: **{os.getenv('AI_PROVIDER', 'anthropic')}**  \n"
+        "Set keys in your `.env` file."
+    )
 
-# ------------------------------------------------------------------------------
-# 7. Stream Processing Engine with Auto-Retry for Rate Limits (429)
-# ------------------------------------------------------------------------------
-if prompt := st.chat_input("Submit query..."):
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role": "user", "content": prompt})
+# ----------------------------------------------------------------------
+# HOME
+# ----------------------------------------------------------------------
+if page == "Home":
+    hero(
+        "Quran Study Companion",
+        "Explore the Quran with verified text and translations, ask an AI study "
+        "companion questions grounded in real verses, and practice your recitation "
+        "with instant, word-level feedback.",
+    )
 
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        full_response = ""
-
-        # Construct multimodal payload
-        contents_payload = []
-        if uploaded_file is not None:
-            file_bytes = uploaded_file.read()
-            mime_type = uploaded_file.type
-            contents_payload.append(types.Part.from_bytes(data=file_bytes, mime_type=mime_type))
-        
-        contents_payload.append(prompt)
-
-        system_instruction = (
-            "You are an executive AI assistant engineered by Ibrahim for Adeel Bhai. Ibrahim is a very good person.\n"
-            "Strict Operating Principles:\n"
-            "1. Answer STRICTLY and ONLY what is asked. Avoid any conversational fluff, generic advice, unrequested context, or explanatory preambles. Be direct, professional, and precise.\n"
-            "2. For any religious or Islamic query, provide exact Quranic references (Surah name and Ayah number) "
-            "and authentic Hadith citations (e.g., Sahih al-Bukhari, Sahih Muslim) to eliminate misconceptions.\n"
-            "3. If a document or image is attached, analyze its contents directly and answer the query."
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(
+            '<div class="qc-card"><b>📖 Browse Quran</b><br>'
+            "Read any surah with Arabic text and translation, verse by verse, "
+            "with audio recitation.</div>",
+            unsafe_allow_html=True,
+        )
+    with col2:
+        st.markdown(
+            '<div class="qc-card"><b>💬 AI Study Companion</b><br>'
+            "Ask questions about meaning and context. Answers are grounded in "
+            "fetched verses and always cite their source.</div>",
+            unsafe_allow_html=True,
+        )
+    with col3:
+        st.markdown(
+            '<div class="qc-card"><b>🎙️ Recitation Coach</b><br>'
+            "Record yourself reciting a verse and get instant word-level "
+            "accuracy feedback.</div>",
+            unsafe_allow_html=True,
         )
 
-        config = types.GenerateContentConfig(system_instruction=system_instruction)
+    disclaimer(
+        "This app is a study aid built on AI and public Quran data sources. "
+        "It is not a substitute for a qualified human teacher or scholar, "
+        "especially for matters of correct tajweed, fiqh, or religious rulings."
+    )
 
-        # Rate Limit Mitigation Engine (3 retries with 3-second sleep)
-        max_retries = 3
-        for attempt in range(max_retries):
+# ----------------------------------------------------------------------
+# BROWSE QURAN
+# ----------------------------------------------------------------------
+elif page == "Browse Quran":
+    hero("Browse the Quran", "Verified Arabic text (Uthmani script) with translation.")
+
+    surahs = quran_api.get_surah_list()
+    surah_labels = [f"{s['number']}. {s['englishName']} ({s['name']})" for s in surahs]
+
+    section_label("SELECT A SURAH")
+    choice = st.selectbox("Surah", surah_labels, label_visibility="collapsed")
+    surah_number = int(choice.split(".")[0])
+
+    translation_edition = st.selectbox(
+        "Translation",
+        ["en.sahih", "en.pickthall", "en.yusufali"],
+        format_func=lambda e: {
+            "en.sahih": "Saheeh International (English)",
+            "en.pickthall": "Pickthall (English)",
+            "en.yusufali": "Yusuf Ali (English)",
+        }[e],
+    )
+
+    arabic_surah = quran_api.get_surah(surah_number, quran_api.ARABIC_EDITION)
+    translated_surah = quran_api.get_surah(surah_number, translation_edition)
+
+    st.write("")
+    for ar_ayah, tr_ayah in zip(arabic_surah["ayahs"], translated_surah["ayahs"]):
+        st.markdown(
+            f"""
+            <div class="qc-card">
+                <span class="qc-verse-ref">{surah_number}:{ar_ayah['numberInSurah']}</span>
+                <div class="qc-verse-arabic">{ar_ayah['text']}</div>
+                <div class="qc-verse-translation">{tr_ayah['text']}</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        audio_url = quran_api.get_audio_url(surah_number, ar_ayah["numberInSurah"])
+        st.audio(audio_url)
+
+# ----------------------------------------------------------------------
+# AI STUDY COMPANION
+# ----------------------------------------------------------------------
+elif page == "AI Study Companion":
+    hero("AI Study Companion", "Ask about meaning, context, and language — grounded in real verses.")
+    disclaimer()
+
+    if "chat" not in st.session_state:
+        st.session_state.chat = ScholarChat()
+
+    for msg in st.session_state.chat.history:
+        css_class = "qc-chat-user" if msg.role == "user" else "qc-chat-ai"
+        label = "You" if msg.role == "user" else "Study Companion"
+        st.markdown(
+            f'<div class="{css_class}"><b>{label}:</b><br>{msg.content}</div>',
+            unsafe_allow_html=True,
+        )
+
+    question = st.chat_input("Ask about a verse, a theme, or historical context…")
+    if question:
+        with st.spinner("Searching verses and thinking…"):
             try:
-                response = client.models.generate_content_stream(
-                    model="gemini-3.6-flash",
-                    contents=contents_payload,
-                    config=config
-                )
+                matches = quran_api.search_quran(question)
+                context = "\n".join(
+                    f"- ({m['surah']['englishName']} {m['surah']['number']}:{m['numberInSurah']}): {m['text']}"
+                    for m in matches[:5]
+                ) or None
+            except Exception:
+                context = None
 
-                for chunk in response:
-                    if chunk.text:
-                        full_response += chunk.text
-                        placeholder.markdown(full_response + "▌")
-
-                placeholder.markdown(full_response)
-                break  # Successful stream, exit retry loop
-
+            try:
+                st.session_state.chat.ask(question, verse_context=context)
             except Exception as e:
-                err_msg = str(e)
-                if "429" in err_msg or "RESOURCE_EXHAUSTED" in err_msg:
-                    if attempt < max_retries - 1:
-                        time.sleep(3)  # Pause for free tier cool-down
-                        continue
-                    else:
-                        placeholder.markdown("⚠️ **Rate limit reached.** Google's Free Tier quota was hit. Please wait ~30 seconds and resubmit.")
-                else:
-                    placeholder.markdown(f"⚠️ **Execution Error:** {err_msg}")
-                    break
+                st.error(
+                    f"Couldn't reach the AI provider ({e}). Check your API key in `.env`."
+                )
+        st.rerun()
 
-    if full_response:
-        st.session_state.messages.append({"role": "assistant", "content": full_response})
+# ----------------------------------------------------------------------
+# RECITATION COACH
+# ----------------------------------------------------------------------
+elif page == "Recitation Coach":
+    hero("Recitation Coach", "Record a verse, get instant word-level feedback.")
+    disclaimer(
+        "This tool checks whether the *words* you said match the verse. It does not "
+        "assess tajweed (proper pronunciation rules) — for that, please learn with a "
+        "qualified teacher."
+    )
+
+    surahs = quran_api.get_surah_list()
+    surah_labels = [f"{s['number']}. {s['englishName']} ({s['name']})" for s in surahs]
+
+    col_a, col_b = st.columns(2)
+    with col_a:
+        section_label("1. CHOOSE A VERSE")
+        choice = st.selectbox("Surah", surah_labels, key="rc_surah")
+        surah_number = int(choice.split(".")[0])
+        ayah_number = st.number_input("Ayah number", min_value=1, value=1, step=1)
+
+    try:
+        reference = quran_api.get_ayah(surah_number, ayah_number, quran_api.ARABIC_EDITION)
+        reference_text = reference["text"]
+    except Exception:
+        st.error("Couldn't fetch that verse. Check the ayah number for this surah.")
+        st.stop()
+
+    with col_b:
+        section_label("REFERENCE VERSE")
+        st.markdown(
+            f'<div class="qc-card"><div class="qc-verse-arabic">{reference_text}</div></div>',
+            unsafe_allow_html=True,
+        )
+        st.audio(quran_api.get_audio_url(surah_number, ayah_number))
+        st.caption("Listen first, then record your own recitation below.")
+
+    st.divider()
+    section_label("2. RECORD YOUR RECITATION")
+    audio_value = st.audio_input("Tap to record")
+
+    if audio_value is not None:
+        with st.spinner("Transcribing your recitation…"):
+            audio_bytes = audio_value.read()
+            use_whisper = bool(os.getenv("OPENAI_API_KEY")) and st.toggle(
+                "Use Whisper (higher accuracy, needs OpenAI key)", value=False
+            )
+            try:
+                transcribed = (
+                    transcribe_with_whisper(audio_bytes)
+                    if use_whisper
+                    else transcribe_audio(audio_bytes)
+                )
+            except Exception as e:
+                st.error(f"Transcription failed: {e}")
+                st.stop()
+
+        if not transcribed:
+            st.warning("Couldn't make out any speech — try recording again, closer to the mic.")
+        else:
+            result = compare_to_reference(transcribed, reference_text)
+
+            col_x, col_y = st.columns([1, 2])
+            with col_x:
+                st.markdown(
+                    f"""
+                    <div class="qc-card" style="text-align:center;">
+                        <div class="qc-accuracy-big">{result.accuracy_pct}%</div>
+                        <div class="qc-accuracy-label">word match accuracy</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with col_y:
+                st.markdown(
+                    f'<div class="qc-card"><b>Feedback</b><br>{result.feedback_message}</div>',
+                    unsafe_allow_html=True,
+                )
+                if result.missed_words:
+                    st.markdown(
+                        f'<div class="qc-card"><b>Words to review</b><br>'
+                        f'<span class="qc-verse-arabic" style="font-size:1.3rem;">'
+                        f'{" ".join(result.missed_words)}</span></div>',
+                        unsafe_allow_html=True,
+                    )
+
+            feedback_audio = synthesize_feedback_audio(result.feedback_message)
+            st.audio(feedback_audio, format="audio/mp3")
