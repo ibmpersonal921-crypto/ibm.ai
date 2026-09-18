@@ -28,7 +28,7 @@ from modules.recitation_coach import (
 load_dotenv()
 
 # ----------------------------------------------------------------------
-# Page setup
+# Page setup & Caching Helper
 # ----------------------------------------------------------------------
 st.set_page_config(
     page_title="Quran Study Companion",
@@ -37,8 +37,20 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
+# Safe CSS Loading
 css_path = Path(__file__).parent / "assets" / "style.css"
-st.markdown(f"<style>{css_path.read_text()}</style>", unsafe_allow_html=True)
+if css_path.exists():
+    st.markdown(f"<style>{css_path.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+
+
+@st.cache_data(show_spinner=False)
+def fetch_surah_list():
+    return quran_api.get_surah_list()
+
+
+@st.cache_data(show_spinner=False)
+def fetch_surah_data(surah_num: int, edition: str):
+    return quran_api.get_surah(surah_num, edition)
 
 
 def hero(title: str, subtitle: str) -> None:
@@ -126,40 +138,59 @@ if page == "Home":
 elif page == "Browse Quran":
     hero("Browse the Quran", "Verified Arabic text (Uthmani script) with translation.")
 
-    surahs = quran_api.get_surah_list()
-    surah_labels = [f"{s['number']}. {s['englishName']} ({s['name']})" for s in surahs]
+    try:
+        surahs = fetch_surah_list()
+        surah_map = {f"{s['number']}. {s['englishName']} ({s['name']})": s for s in surahs}
+        
+        section_label("SELECT A SURAH")
+        choice = st.selectbox("Surah", list(surah_map.keys()), label_visibility="collapsed")
+        selected_surah_meta = surah_map[choice]
+        surah_number = selected_surah_meta["number"]
 
-    section_label("SELECT A SURAH")
-    choice = st.selectbox("Surah", surah_labels, label_visibility="collapsed")
-    surah_number = int(choice.split(".")[0])
-
-    translation_edition = st.selectbox(
-        "Translation",
-        ["en.sahih", "en.pickthall", "en.yusufali"],
-        format_func=lambda e: {
-            "en.sahih": "Saheeh International (English)",
-            "en.pickthall": "Pickthall (English)",
-            "en.yusufali": "Yusuf Ali (English)",
-        }[e],
-    )
-
-    arabic_surah = quran_api.get_surah(surah_number, quran_api.ARABIC_EDITION)
-    translated_surah = quran_api.get_surah(surah_number, translation_edition)
-
-    st.write("")
-    for ar_ayah, tr_ayah in zip(arabic_surah["ayahs"], translated_surah["ayahs"]):
-        st.markdown(
-            f"""
-            <div class="qc-card">
-                <span class="qc-verse-ref">{surah_number}:{ar_ayah['numberInSurah']}</span>
-                <div class="qc-verse-arabic">{ar_ayah['text']}</div>
-                <div class="qc-verse-translation">{tr_ayah['text']}</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
+        translation_edition = st.selectbox(
+            "Translation",
+            ["en.sahih", "en.pickthall", "en.yusufali"],
+            format_func=lambda e: {
+                "en.sahih": "Saheeh International (English)",
+                "en.pickthall": "Pickthall (English)",
+                "en.yusufali": "Yusuf Ali (English)",
+            }[e],
         )
-        audio_url = quran_api.get_audio_url(surah_number, ar_ayah["numberInSurah"])
-        st.audio(audio_url)
+
+        arabic_surah = fetch_surah_data(surah_number, quran_api.ARABIC_EDITION)
+        translated_surah = fetch_surah_data(surah_number, translation_edition)
+
+        total_ayahs = len(arabic_surah["ayahs"])
+        page_size = 10
+        total_pages = (total_ayahs + page_size - 1) // page_size
+
+        if total_pages > 1:
+            page_num = st.number_input("Page", min_value=1, max_value=total_pages, value=1)
+        else:
+            page_num = 1
+
+        start_idx = (page_num - 1) * page_size
+        end_idx = start_idx + page_size
+
+        st.write("")
+        zipped_ayahs = list(zip(arabic_surah["ayahs"], translated_surah["ayahs"]))[start_idx:end_idx]
+
+        for ar_ayah, tr_ayah in zipped_ayahs:
+            st.markdown(
+                f"""
+                <div class="qc-card">
+                    <span class="qc-verse-ref">{surah_number}:{ar_ayah['numberInSurah']}</span>
+                    <div class="qc-verse-arabic">{ar_ayah['text']}</div>
+                    <div class="qc-verse-translation">{tr_ayah['text']}</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            audio_url = quran_api.get_audio_url(surah_number, ar_ayah["numberInSurah"])
+            st.audio(audio_url)
+
+    except Exception as e:
+        st.error(f"Error loading Quranic data: {e}")
 
 # ----------------------------------------------------------------------
 # AI STUDY COMPANION
@@ -193,11 +224,11 @@ elif page == "AI Study Companion":
 
             try:
                 st.session_state.chat.ask(question, verse_context=context)
+                st.rerun()
             except Exception as e:
                 st.error(
                     f"Couldn't reach the AI provider ({e}). Check your API key in `.env`."
                 )
-        st.rerun()
 
 # ----------------------------------------------------------------------
 # RECITATION COACH
@@ -210,80 +241,86 @@ elif page == "Recitation Coach":
         "qualified teacher."
     )
 
-    surahs = quran_api.get_surah_list()
-    surah_labels = [f"{s['number']}. {s['englishName']} ({s['name']})" for s in surahs]
-
-    col_a, col_b = st.columns(2)
-    with col_a:
-        section_label("1. CHOOSE A VERSE")
-        choice = st.selectbox("Surah", surah_labels, key="rc_surah")
-        surah_number = int(choice.split(".")[0])
-        ayah_number = st.number_input("Ayah number", min_value=1, value=1, step=1)
-
     try:
+        surahs = fetch_surah_list()
+        surah_map = {f"{s['number']}. {s['englishName']} ({s['name']})": s for s in surahs}
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            section_label("1. CHOOSE A VERSE")
+            choice = st.selectbox("Surah", list(surah_map.keys()), key="rc_surah")
+            selected_surah = surah_map[choice]
+            surah_number = selected_surah["number"]
+            max_ayahs = selected_surah.get("numberOfAyahs", 286)
+
+            ayah_number = st.number_input(
+                "Ayah number", min_value=1, max_value=max_ayahs, value=1, step=1
+            )
+
         reference = quran_api.get_ayah(surah_number, ayah_number, quran_api.ARABIC_EDITION)
         reference_text = reference["text"]
-    except Exception:
-        st.error("Couldn't fetch that verse. Check the ayah number for this surah.")
-        st.stop()
 
-    with col_b:
-        section_label("REFERENCE VERSE")
-        st.markdown(
-            f'<div class="qc-card"><div class="qc-verse-arabic">{reference_text}</div></div>',
-            unsafe_allow_html=True,
-        )
-        st.audio(quran_api.get_audio_url(surah_number, ayah_number))
-        st.caption("Listen first, then record your own recitation below.")
-
-    st.divider()
-    section_label("2. RECORD YOUR RECITATION")
-    audio_value = st.audio_input("Tap to record")
-
-    if audio_value is not None:
-        with st.spinner("Transcribing your recitation…"):
-            audio_bytes = audio_value.read()
-            use_whisper = bool(os.getenv("OPENAI_API_KEY")) and st.toggle(
-                "Use Whisper (higher accuracy, needs OpenAI key)", value=False
+        with col_b:
+            section_label("REFERENCE VERSE")
+            st.markdown(
+                f'<div class="qc-card"><div class="qc-verse-arabic">{reference_text}</div></div>',
+                unsafe_allow_html=True,
             )
-            try:
-                transcribed = (
-                    transcribe_with_whisper(audio_bytes)
-                    if use_whisper
-                    else transcribe_audio(audio_bytes)
-                )
-            except Exception as e:
-                st.error(f"Transcription failed: {e}")
-                st.stop()
+            st.audio(quran_api.get_audio_url(surah_number, ayah_number))
+            st.caption("Listen first, then record your own recitation below.")
 
-        if not transcribed:
-            st.warning("Couldn't make out any speech — try recording again, closer to the mic.")
-        else:
-            result = compare_to_reference(transcribed, reference_text)
+        st.divider()
+        section_label("2. RECORD YOUR RECITATION")
+        
+        use_whisper = bool(os.getenv("OPENAI_API_KEY")) and st.toggle(
+            "Use Whisper (higher accuracy, needs OpenAI key)", value=False
+        )
+        audio_value = st.audio_input("Tap to record")
 
-            col_x, col_y = st.columns([1, 2])
-            with col_x:
-                st.markdown(
-                    f"""
-                    <div class="qc-card" style="text-align:center;">
-                        <div class="qc-accuracy-big">{result.accuracy_pct}%</div>
-                        <div class="qc-accuracy-label">word match accuracy</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-            with col_y:
-                st.markdown(
-                    f'<div class="qc-card"><b>Feedback</b><br>{result.feedback_message}</div>',
-                    unsafe_allow_html=True,
-                )
-                if result.missed_words:
+        if audio_value is not None:
+            with st.spinner("Transcribing your recitation…"):
+                audio_bytes = audio_value.read()
+                try:
+                    transcribed = (
+                        transcribe_with_whisper(audio_bytes)
+                        if use_whisper
+                        else transcribe_audio(audio_bytes)
+                    )
+                except Exception as e:
+                    st.error(f"Transcription failed: {e}")
+                    st.stop()
+
+            if not transcribed:
+                st.warning("Couldn't make out any speech — try recording again, closer to the mic.")
+            else:
+                result = compare_to_reference(transcribed, reference_text)
+
+                col_x, col_y = st.columns([1, 2])
+                with col_x:
                     st.markdown(
-                        f'<div class="qc-card"><b>Words to review</b><br>'
-                        f'<span class="qc-verse-arabic" style="font-size:1.3rem;">'
-                        f'{" ".join(result.missed_words)}</span></div>',
+                        f"""
+                        <div class="qc-card" style="text-align:center;">
+                            <div class="qc-accuracy-big">{result.accuracy_pct}%</div>
+                            <div class="qc-accuracy-label">word match accuracy</div>
+                        </div>
+                        """,
                         unsafe_allow_html=True,
                     )
+                with col_y:
+                    st.markdown(
+                        f'<div class="qc-card"><b>Feedback</b><br>{result.feedback_message}</div>',
+                        unsafe_allow_html=True,
+                    )
+                    if result.missed_words:
+                        st.markdown(
+                            f'<div class="qc-card"><b>Words to review</b><br>'
+                            f'<span class="qc-verse-arabic" style="font-size:1.3rem;">'
+                            f'{" ".join(result.missed_words)}</span></div>',
+                            unsafe_allow_html=True,
+                        )
 
-            feedback_audio = synthesize_feedback_audio(result.feedback_message)
-            st.audio(feedback_audio, format="audio/mp3")
+                feedback_audio = synthesize_feedback_audio(result.feedback_message)
+                st.audio(feedback_audio, format="audio/mp3")
+
+    except Exception as e:
+        st.error(f"Error initializing Recitation Coach: {e}")
