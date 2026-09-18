@@ -50,18 +50,27 @@ TRANSLATIONS = {
 }
 
 # Verse-of-the-day rotation. References only — the text itself comes from the API.
+# Keep every passage to roughly four verses so the card fits on one screen without
+# scrolling; longer surahs belong on Browse, not the dashboard.
 DAILY_ROTATION = [
-    (1, 1, 7),      # Al-Fatiha
-    (2, 255, 255),  # Ayat al-Kursi
     (112, 1, 4),    # Al-Ikhlas
     (103, 1, 3),    # Al-'Asr
-    (94, 1, 8),     # Ash-Sharh
-    (55, 1, 16),    # Ar-Rahman
-    (36, 1, 12),    # Ya-Sin
-    (67, 1, 11),    # Al-Mulk
+    (2, 255, 255),  # Ayat al-Kursi
+    (94, 5, 6),     # with hardship comes ease
+    (108, 1, 3),    # Al-Kawthar
+    (13, 28, 28),   # hearts settle in remembrance
+    (67, 1, 2),     # Al-Mulk, opening
+    (39, 53, 53),   # do not despair
+    (110, 1, 3),    # An-Nasr
+    (55, 1, 4),     # Ar-Rahman, opening
+    (49, 13, 13),   # made into peoples and tribes
+    (93, 1, 5),     # Ad-Duha
+    (2, 286, 286),  # closing of Al-Baqarah
+    (36, 1, 4),     # Ya-Sin, opening
     (113, 1, 5),    # Al-Falaq
-    (114, 1, 6),    # An-Nas
 ]
+
+MAX_DAILY_AYAHS = 6  # hard stop, in case the rotation ever grows a long entry
 
 # Verified Uthmani text, used only if the network is unavailable.
 FATIHA_FALLBACK = {
@@ -163,10 +172,26 @@ footer, #MainMenu { visibility: hidden; }
 
 .block-container { padding: 1.6rem 2.4rem 4rem; max-width: 1180px; }
 
-html, body, [class*="st-"], button, input, textarea {
+/* Scope this narrowly. A blanket [class*="st-"] rule also hits Streamlit's icon
+   spans, which set their glyph via an emotion class — override their font and the
+   ligature name ("arrow_drop_down") prints as literal text next to every expander
+   and select. */
+html, body, button, input, textarea,
+[data-testid="stMarkdownContainer"], [data-testid="stWidgetLabel"],
+div[data-baseweb="select"], [data-testid="stExpander"] summary {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
-body, p, span, label, li { color: var(--ink); }
+body, p, label, li { color: var(--ink); }
+
+[data-testid="stIconMaterial"], [data-testid="stExpanderToggleIcon"],
+.material-icons, .material-icons-outlined, [data-baseweb="icon"] i {
+  font-family: 'Material Symbols Rounded', 'Material Icons' !important;
+  font-size: 20px;
+}
+[data-testid="stExpander"] summary {
+  font-size: 13px; color: var(--muted); padding: .5rem .85rem;
+}
+[data-testid="stExpander"] summary:hover { color: var(--ink); }
 
 /* ---- sidebar ---- */
 section[data-testid="stSidebar"] {
@@ -232,9 +257,11 @@ section[data-testid="stSidebar"] .stButton > button:focus-visible {
   direction: rtl;
   text-align: center;
   color: #F3EFE4;
-  line-height: 2.15;
-  margin: 6px 0 22px;
+  line-height: 2.25;
+  max-width: 34ch;
+  margin: 6px auto 22px;
 }
+.translit, .translation { margin-left: auto; margin-right: auto; }
 .ayah-mark {
   color: var(--gold);
   font-size: .62em;
@@ -572,7 +599,7 @@ with st.sidebar:
     with st.expander("Settings"):
         reciter_name = st.selectbox("Reciter", list(RECITERS), index=0)
         translation_name = st.selectbox("Translation", list(TRANSLATIONS), index=0)
-        font_px = st.slider("Arabic size", 22, 48, 32, step=2)
+        font_px = st.slider("Arabic size", 22, 48, 28, step=2)
         show_translit = st.toggle("Show transliteration", value=True)
 
 RECITER = RECITERS[reciter_name]
@@ -629,6 +656,8 @@ def render_home() -> None:
         return
 
     ayahs = [a for a in surah["ayahs"] if first <= a["numberInSurah"] <= last]
+    ayahs = ayahs[:MAX_DAILY_AYAHS]
+    last = ayahs[-1]["numberInSurah"]
     ref = (
         f'Surah {surah["englishName"]}, {first}'
         if first == last
@@ -705,12 +734,12 @@ def render_browse() -> None:
         return
 
     total = len(surah["ayahs"])
-    lo, hi = st.select_slider(
-        "Verses",
-        options=list(range(1, total + 1)),
-        value=(1, min(10, total)),
-        label_visibility="collapsed",
-    )
+    if total == 1:
+        lo, hi = 1, 1
+    else:
+        lo, hi = st.slider(
+            "Verses", 1, total, (1, min(10, total)), label_visibility="collapsed"
+        )
     shown = [a for a in surah["ayahs"] if lo <= a["numberInSurah"] <= hi]
 
     st.markdown(
@@ -758,7 +787,13 @@ SYSTEM_PROMPT = (
 
 
 def ask_claude(history: list[dict]) -> str:
-    key = os.environ.get("ANTHROPIC_API_KEY") or st.secrets.get("ANTHROPIC_API_KEY", "")
+    key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not key:
+        # st.secrets raises rather than returning a default when no secrets file exists.
+        try:
+            key = st.secrets["ANTHROPIC_API_KEY"]
+        except Exception:
+            key = ""
     if not key:
         return (
             "No API key found. Set `ANTHROPIC_API_KEY` in your environment or in "
