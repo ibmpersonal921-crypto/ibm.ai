@@ -8,264 +8,210 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# 2. Session State Setup for "Opening" Views
-if "opened_surah" not in st.session_state:
-    st.session_state.opened_surah = None
-if "show_tafsir" not in st.session_state:
-    st.session_state.show_tafsir = False
-if "audio_playing" not in st.session_state:
-    st.session_state.audio_playing = False
-
-# 3. Custom CSS (Emerald Dark Theme & Custom Action Styling)
+# 2. Complete CSS Customization (Emerald & Charcoal Dark Theme)
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
 
+    /* Global Body styling */
     .stApp {
         background-color: #121A22;
         color: #E2E8F0;
         font-family: 'Inter', sans-serif;
     }
     
+    /* Clean Streamlit default elements */
     #MainMenu, footer, header { visibility: hidden; }
-    .block-container { padding-top: 1.2rem; padding-bottom: 2rem; }
+    .block-container { padding: 1.5rem 2.5rem; }
 
+    /* Left Sidebar Styling */
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #0E161F 0%, #0A1C18 100%);
-        border-right: 1px solid rgba(45, 212, 191, 0.15);
+        background: linear-gradient(180deg, #0E1816 0%, #0B1312 100%);
+        border-right: 1px solid rgba(45, 212, 191, 0.12);
+        width: 260px !important;
+    }
+    .sidebar-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #E2E8F0;
+        font-size: 1.1rem;
+        font-weight: 700;
+        padding: 0.5rem 0 1.5rem 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        margin-bottom: 1.5rem;
     }
     
-    .sidebar-brand {
-        color: #D4AF37;
-        font-size: 1.25rem;
-        font-weight: 700;
-        padding: 0.5rem 0 1.2rem 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        margin-bottom: 1.2rem;
+    /* Custom Sidebar Nav Items */
+    .stRadio > label { display: none; }
+    .stRadio div[role="radiogroup"] { gap: 6px; }
+    .stRadio div[role="radiogroup"] > label {
+        background: transparent;
+        border: 1px solid transparent;
+        padding: 0.65rem 1rem;
+        border-radius: 8px;
+        color: #94A3B8;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    .stRadio div[role="radiogroup"] > label:hover {
+        background: rgba(45, 212, 191, 0.05);
+        color: #E2E8F0;
+    }
+    .stRadio div[role="radiogroup"] > label[data-checked="true"] {
+        background: rgba(13, 38, 33, 0.9) !important;
+        border: 1px solid rgba(45, 212, 191, 0.3) !important;
+        color: #2DD4BF !important;
     }
 
-    .app-card {
-        background: linear-gradient(135deg, #16222F 0%, #0D2621 100%);
-        border: 1px solid rgba(45, 212, 191, 0.22);
-        border-radius: 14px;
-        padding: 1.8rem;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.35);
-        margin-bottom: 1.2rem;
+    /* Header Bar Controls */
+    .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.8rem;
     }
-
-    .verse-meta {
-        color: #D4AF37;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 1.1px;
+    .page-title {
+        font-size: 1.35rem;
         font-weight: 600;
-        margin-bottom: 0.8rem;
+        color: #F8FAFC;
     }
 
-    .arabic-text {
+    /* Main Verse Card Interface */
+    .verse-card {
+        background: linear-gradient(160deg, #182623 0%, #101B19 100%);
+        border: 1px solid rgba(45, 212, 191, 0.18);
+        border-radius: 14px;
+        padding: 2.2rem;
+        box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+        position: relative;
+    }
+    .verse-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        color: #94A3B8;
+        font-size: 0.92rem;
+        font-weight: 500;
+        margin-bottom: 2rem;
+    }
+    .arabic-text-container {
         font-family: 'Amiri', serif;
-        font-size: 2.2rem;
+        font-size: 2.3rem;
         line-height: 2.3;
-        text-align: right;
+        text-align: center;
         direction: rtl;
         color: #FFFFFF;
-        margin-bottom: 1rem;
+        margin: 1.5rem 0 2rem 0;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-
-    .recitation-box {
-        background-color: #0A141D;
-        border: 1px solid rgba(45, 212, 191, 0.3);
-        border-radius: 12px;
-        padding: 1.5rem;
+    .transliteration-text {
+        font-size: 0.88rem;
+        color: #94A3B8;
+        line-height: 1.6;
         text-align: center;
+        max-width: 90%;
+        margin: 0 auto 2rem auto;
     }
 
-    .feedback-green { color: #10B981; font-weight: 700; }
-    .feedback-yellow { color: #F59E0B; font-weight: 700; text-decoration: underline; }
-    .feedback-red { color: #EF4444; font-weight: 700; background: rgba(239, 68, 68, 0.15); padding: 2px 6px; border-radius: 4px; }
+    /* Audio Bar Container */
+    .audio-player-container {
+        background: #0B1312;
+        border: 1px solid rgba(45, 212, 191, 0.15);
+        border-radius: 10px;
+        padding: 0.8rem 1.2rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1rem;
+    }
     
-    .status-badge {
-        background: rgba(16, 185, 129, 0.15);
-        color: #10B981;
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        font-weight: 600;
+    /* Utility Pills & Badges */
+    .recitation-badge {
+        background: rgba(45, 212, 191, 0.1);
+        border: 1px solid rgba(45, 212, 191, 0.25);
+        color: #2DD4BF;
+        padding: 0.3rem 0.8rem;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
 </style>
 """, unsafe_allow_html=True)
 
-# 4. Sidebar Navigation
+# 3. Sidebar Navigation
 with st.sidebar:
-    st.markdown('<div class="sidebar-brand">📖 Quran Companion</div>', unsafe_allow_html=True)
-    
-    nav_option = st.radio(
-        "Navigation",
-        ["Dashboard", "Live Recitation Coach", "AI Companion", "Browse Quran"],
-        label_visibility="collapsed"
-    )
-    
-    st.divider()
-    st.markdown("##### 🎙️ Voice Model Engine")
-    st.caption("Engine: **Tajweed-Net v2.4 (Live)**")
-    st.markdown('<span class="status-badge">● Engine Online</span>', unsafe_allow_html=True)
+    st.markdown("""
+    <div class="sidebar-title">
+        <span style="font-size: 1.3rem;">📖</span> Quran Study Companion
+    </div>
+    """, unsafe_allow_html=True)
 
-# 5. Top Bar AI Search
-search_col1, search_col2 = st.columns([4, 1])
-with search_col1:
-    search_input = st.text_input(
-        "AI Search",
-        placeholder="🔍 Type to search or ask AI (e.g., 'Open Surah Mulk', 'Verses about patience')...",
+    nav = st.radio(
+        "Navigation Menu",
+        ["🏠  Home", "📖  Browse Quran", "🤖  AI Companion", "🎙️  Recitation Coach"],
+        index=0
+    )
+
+# 4. Top Header & Search Integration
+header_col1, header_col2, header_col3 = st.columns([2, 4, 1])
+
+with header_col1:
+    st.markdown('<div class="page-title">Dashboard</div>', unsafe_allow_html=True)
+
+with header_col2:
+    search_query = st.text_input(
+        "Search Bar",
+        placeholder="🔍  Search or Ask AI (e.g., 'Al-Fatiha Tafsir')",
         label_visibility="collapsed"
     )
-with search_col2:
-    if st.button("✨ Search / Ask", use_container_width=True):
-        if search_input:
-            st.toast(f"Searching query: '{search_input}'", icon="🔍")
+
+with header_col3:
+    col_icon1, col_icon2 = st.columns(2)
+    with col_icon1:
+        st.button("🔔", help="Notifications", use_container_width=True)
+    with col_icon2:
+        st.button("👤", help="Profile", use_container_width=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 6. Navigation Views
-if nav_option == "Dashboard":
-    st.markdown("""
-    <div class="app-card">
-        <div class="verse-meta">Verse of the Day • Surah Al-Fatiha (1:1-3)</div>
-        <div class="arabic-text">
-            ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ ۝ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ ۝ مَٰلِكِ يَوۡمِ ٱلدِّينِ
-        </div>
-        <p style="color: #CBD5E1; font-size: 1rem; margin-top: 1rem;">
-            "All praise is due to Allah, Lord of the worlds — The Entirely Merciful, the Especially Merciful — Sovereign of the Day of Recompense."
-        </p>
+# 5. Verse of the Day Card View
+st.markdown("""
+<div class="verse-card">
+    <div class="verse-card-header">
+        <span>Verse of the Day (Surah Al-Fatiha, 1-7)</span>
+        <span style="cursor: pointer; letter-spacing: 2px;">•••</span>
     </div>
-    """, unsafe_allow_html=True)
-
-    # Interactive Action Buttons
-    action_col1, action_col2, action_col3 = st.columns(3)
-    with action_col1:
-        if st.button("📖 Open Full Surah Al-Fatiha", use_container_width=True):
-            st.session_state.opened_surah = "1. Al-Fatiha"
-            st.toast("Opening Surah Al-Fatiha view...", icon="📂")
-    with action_col2:
-        if st.button("💡 Open AI Tafsir Analysis", use_container_width=True):
-            st.session_state.show_tafsir = not st.session_state.show_tafsir
-    with action_col3:
-        if st.button("▶ Open Audio Player", use_container_width=True):
-            st.session_state.audio_playing = True
-
-    # Expandable Tafsir Panel
-    if st.session_state.show_tafsir:
-        with st.expander("📖 Detailed Tafsir & Linguistic Insights", expanded=True):
-            st.markdown("""
-            **Key Insights for Surah Al-Fatiha (Verses 1-3):**
-            * **Rabb (رَبِّ):** Implies ownership, nurturing, and sustaining everything in existence.
-            * **Ar-Rahman vs Ar-Rahim:** *Ar-Rahman* refers to all-encompassing mercy for all creation, while *Ar-Rahim* emphasizes specific, continuous mercy.
-            """)
-
-    # Audio Player Bar
-    if st.session_state.audio_playing:
-        st.info("🎵 Playing Recitation: **Mishary Rashid Alafasy**")
-        st.slider("Audio Progress", 0, 100, 30, label_visibility="collapsed")
-
-    st.divider()
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.metric("Reading Streak", "7 Days", "+1 today")
-    with m2:
-        st.metric("Tajweed Accuracy", "94%", "+2%")
-    with m3:
-        st.metric("Verses Memorized", "128", "+5 this week")
-
-elif nav_option == "Live Recitation Coach":
-    st.subheader("🎙️ Live AI Recitation & Voice Test")
-    st.caption("Read the prompt aloud into your microphone to get real-time tajweed corrections.")
-
-    st.markdown("""
-    <div class="app-card">
-        <div class="verse-meta">Target Verse: Surah Al-Ikhlas (112:1-2)</div>
-        <div class="arabic-text">
-            قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ
-        </div>
+    <div class="arabic-text-container">
+        ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ ۝ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ ۝ مَٰلِكِ يَوۡمِ ٱلدِّينِ ۝ إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ ۝ ٱهۡدِنَا ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ ۝ صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ ۝
     </div>
-    """, unsafe_allow_html=True)
-
-    rec_col1, rec_col2 = st.columns([1, 2])
-    with rec_col1:
-        start_rec = st.button("🔴 Start Live Voice Test", type="primary", use_container_width=True)
-    with rec_col2:
-        if start_rec:
-            st.progress(85, text="🎙️ Listening & analyzing speech phonemes...")
-
-    st.markdown("### 📊 Live AI Pronunciation Feedback")
-    
-    st.markdown("""
-    <div class="recitation-box">
-        <h5 style="color: #94A3B8; margin-bottom: 1rem;">Phoneme Diagnostics</h5>
-        <div style="font-family: 'Amiri', serif; font-size: 2.2rem; direction: rtl; line-height: 2.2;">
-            <span class="feedback-green">قُلۡ</span> 
-            <span class="feedback-green">هُوَ</span> 
-            <span class="feedback-green">ٱللَّهُ</span> 
-            <span class="feedback-yellow">أَحَدٌ</span> 
-            <span class="feedback-red">ٱلصَّمَدُ</span>
-        </div>
+    <div class="transliteration-text">
+        Bi-smi llāhi r-raḥmāni r-raḥīm. Al-ḥamdu li-llāhi rabbi l-ʿālamīn. Ar-raḥmāni r-raḥīm. Māliki yawmi d-dīn. Iyyāka naʿbudu wa-iyyāka nastaʿīn. Ihdinā ṣ-ṣirāṭa l-mustaqīm. Ṣirāṭa l-ladhīna anʿamta ʿalayhim ghayri l-maghḍūbi ʿalayhim wa-lā ḍ-ḍāllīn.
     </div>
-    """, unsafe_allow_html=True)
+</div>
+""", unsafe_allow_html=True)
 
-    # Open Diagnostics Expander
-    with st.expander("🔍 Open Full Tajweed Breakdown & Correction Steps"):
-        st.error("**Makhraj Error on 'ٱلصَّمَدُ':** Heavy 'ص' was softened into 'س'. Focus on tongue elevation.")
-        st.warning("**Qalqalah Notice on 'أَحَدٌ':** Make the stopping bounce cleaner at the end of the verse.")
+# 6. Audio Player Bar & Action Button
+player_col1, player_col2, player_col3, player_col4 = st.columns([1, 4, 2, 2])
 
-elif nav_option == "Browse Quran":
-    st.subheader("📖 Browse & Read Surahs")
-    
-    surah_list = [
-        {"id": 1, "name": "Al-Fatiha", "arabic": "الفاتحة", "verses": 7, "type": "Meccan"},
-        {"id": 2, "name": "Al-Baqarah", "arabic": "البقرة", "verses": 286, "type": "Medinan"},
-        {"id": 36, "name": "Ya-Sin", "arabic": "يس", "verses": 83, "type": "Meccan"},
-        {"id": 67, "name": "Al-Mulk", "arabic": "الملك", "verses": 30, "type": "Meccan"},
-        {"id": 112, "name": "Al-Ikhlas", "arabic": "الإخلاص", "verses": 4, "type": "Meccan"},
-    ]
+with player_col1:
+    btn_p1, btn_p2, btn_p3 = st.columns(3)
+    with btn_p1:
+        st.button("⏮", key="prev_btn")
+    with btn_p2:
+        st.button("▶", key="play_btn", type="primary")
+    with btn_p3:
+        st.button("⏭", key="next_btn")
 
-    # Grid Display of Surahs with "Open" Action
-    for item in surah_list:
-        with st.container():
-            col_info, col_btn = st.columns([4, 1])
-            with col_info:
-                st.markdown(f"**{item['id']}. {item['name']}** ({item['arabic']}) — *{item['verses']} Verses • {item['type']}*")
-            with col_btn:
-                if st.button(f"Open Surah", key=f"open_{item['id']}"):
-                    st.session_state.opened_surah = f"{item['id']}. {item['name']}"
-            st.divider()
+with player_col2:
+    st.slider("Audio Seek Bar", 0, 100, 35, label_visibility="collapsed")
 
-    # Opened Surah Reader View
-    if st.session_state.opened_surah:
-        st.success(f"📂 Currently Reading: **Surah {st.session_state.opened_surah}**")
-        with st.expander("📖 Open Full Text & Recitation View", expanded=True):
-            st.markdown("""
-            <div class="arabic-text">
-                بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ <br>
-                قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدٌ
-            </div>
-            """, unsafe_allow_html=True)
-            st.audio("https://server8.mp3quran.net/afs/112.mp3")
+with player_col3:
+    st.markdown("<p style='text-align: right; color: #94A3B8; font-size: 0.85rem; margin-top: 8px;'>Speed &nbsp;&nbsp; <b>- &nbsp; 1 &nbsp; +</b></p>", unsafe_allow_html=True)
 
-elif nav_option == "AI Companion":
-    st.subheader("🤖 AI Quranic Study Assistant")
-    st.caption("Ask questions about verse context, root words, or thematic analysis.")
-    
-    if "messages" not in st.session_state:
-        st.session_state.messages = [
-            {"role": "assistant", "content": "Assalamu Alaikum! How can I assist your Quran study today?"}
-        ]
-
-    for msg in st.session_state.messages:
-        st.chat_message(msg["role"]).write(msg["content"])
-
-    if prompt := st.chat_input("Ask anything about Surahs, Tafsir, or Tajweed rules..."):
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.chat_message("user").write(prompt)
-        
-        reply = f"Here are the study insights for: '{prompt}'."
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-        st.chat_message("assistant").write(reply)
+with player_col4:
+    if st.button("🎙️ Live Recitation Practice", type="secondary", use_container_width=True):
+        st.toast("Opening Live Recitation Coach for this verse...", icon="🎙️")
