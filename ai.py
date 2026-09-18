@@ -50,27 +50,43 @@ TRANSLATIONS = {
 }
 
 # Verse-of-the-day rotation. References only — the text itself comes from the API.
-# Keep every passage to roughly four verses so the card fits on one screen without
-# scrolling; longer surahs belong on Browse, not the dashboard.
+# Every entry here is either a complete short surah or a short opening passage.
+# Deliberately excluded: single long ayahs such as 2:255 (Ayat al-Kursi, the longest
+# verse in the Quran) and 2:286 — a low ayah COUNT doesn't guarantee a short CARD
+# when one verse alone runs to 50+ words, so length is also enforced in code below.
 DAILY_ROTATION = [
-    (112, 1, 4),    # Al-Ikhlas
-    (103, 1, 3),    # Al-'Asr
-    (2, 255, 255),  # Ayat al-Kursi
-    (94, 5, 6),     # with hardship comes ease
-    (108, 1, 3),    # Al-Kawthar
-    (13, 28, 28),   # hearts settle in remembrance
-    (67, 1, 2),     # Al-Mulk, opening
-    (39, 53, 53),   # do not despair
-    (110, 1, 3),    # An-Nasr
-    (55, 1, 4),     # Ar-Rahman, opening
-    (49, 13, 13),   # made into peoples and tribes
-    (93, 1, 5),     # Ad-Duha
-    (2, 286, 286),  # closing of Al-Baqarah
-    (36, 1, 4),     # Ya-Sin, opening
-    (113, 1, 5),    # Al-Falaq
+    (112, 1, 4),   # Al-Ikhlas — entire surah
+    (103, 1, 3),   # Al-'Asr — entire surah
+    (108, 1, 3),   # Al-Kawthar — entire surah
+    (110, 1, 3),   # An-Nasr — entire surah
+    (94, 5, 6),    # Ash-Sharh — "with hardship comes ease"
+    (67, 1, 2),    # Al-Mulk — opening
+    (55, 1, 4),    # Ar-Rahman — opening
+    (36, 1, 4),    # Ya-Sin — opening
+    (93, 1, 5),    # Ad-Duha — entire surah
+    (105, 1, 5),   # Al-Fil — entire surah
+    (106, 1, 4),   # Quraysh — entire surah
+    (107, 1, 3),   # Al-Ma'un — opening
+    (97, 1, 5),    # Al-Qadr — entire surah
+    (113, 1, 5),   # Al-Falaq — entire surah
+    (114, 1, 6),   # An-Nas — entire surah
 ]
 
-MAX_DAILY_AYAHS = 6  # hard stop, in case the rotation ever grows a long entry
+MAX_DAILY_AYAHS = 6   # in step with the longest entry above (An-Nas)
+MAX_DAILY_WORDS = 40  # hard budget in Arabic words, so one oversized ayah can't slip through
+
+
+def trim_to_word_budget(ayahs: list[dict], budget: int = MAX_DAILY_WORDS) -> list[dict]:
+    """Drop trailing ayahs until the combined Arabic text fits the budget.
+
+    Ayah count alone doesn't bound card height — a single verse can run to 50+
+    words — so this checks the actual text length and always keeps at least one
+    ayah even if that one ayah alone exceeds the budget.
+    """
+    trimmed = list(ayahs)
+    while len(trimmed) > 1 and sum(len(a["arabic"].split()) for a in trimmed) > budget:
+        trimmed.pop()
+    return trimmed
 
 # Verified Uthmani text, used only if the network is unavailable.
 FATIHA_FALLBACK = {
@@ -152,20 +168,21 @@ CSS = """
 @import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Inter:wght@300;400;500;600&display=swap');
 
 :root {
-  --bg:        #121A22;
-  --panel:     #0D141A;
-  --card-a:    #16241F;
-  --card-b:    #101A22;
+  --bg:        radial-gradient(130% 110% at 18% -12%, #1B3A2E 0%, #11241C 42%, #0B1712 100%);
+  --panel:     linear-gradient(180deg, #0F2019 0%, #0A150F 100%);
+  --card-a:    #1C2F26;
+  --card-b:    #101E17;
   --gold:      #D4AF37;
   --gold-soft: rgba(212, 175, 55, 0.16);
   --emerald:   #1E4638;
+  --emerald-line: rgba(88, 150, 122, 0.22);
   --ink:       #ECEAE4;
   --muted:     #9DAEB4;
   --line:      rgba(212, 175, 55, 0.14);
 }
 
 /* ---- shell ---- */
-[data-testid="stAppViewContainer"] { background: var(--bg); }
+[data-testid="stAppViewContainer"] { background: var(--bg); background-attachment: fixed; }
 [data-testid="stHeader"] { background: transparent; }
 [data-testid="stToolbar"] { right: 1rem; }
 footer, #MainMenu { visibility: hidden; }
@@ -196,7 +213,7 @@ body, p, label, li { color: var(--ink); }
 /* ---- sidebar ---- */
 section[data-testid="stSidebar"] {
   background: var(--panel);
-  border-right: 1px solid rgba(255,255,255,0.05);
+  border-right: 1px solid var(--emerald-line);
 }
 section[data-testid="stSidebar"] > div { padding-top: 1.4rem; }
 
@@ -656,7 +673,7 @@ def render_home() -> None:
         return
 
     ayahs = [a for a in surah["ayahs"] if first <= a["numberInSurah"] <= last]
-    ayahs = ayahs[:MAX_DAILY_AYAHS]
+    ayahs = trim_to_word_budget(ayahs[:MAX_DAILY_AYAHS])
     last = ayahs[-1]["numberInSurah"]
     ref = (
         f'Surah {surah["englishName"]}, {first}'
